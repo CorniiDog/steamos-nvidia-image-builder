@@ -246,8 +246,14 @@ installation targets, production activation, or hardware certification.
   duplicate fixture origins/result landmarks after transitions, stale next actions after
   recovery, and altered compatible trust text, stale close/reopen state, and wrong
   reopened focus; the live package
-  smoke passes. Debian,
-  companion windows, delivered key-event/editable-text traversal, and pixel
+  smoke passes. A debug-only, Linux-only opt-in now opens the idle native build-progress
+  companion without submitting a build. On Ubuntu 24.04.4 Wayland, the live
+  AT-SPI smoke verifies the exact main and progress frames, initial progress
+  headings/status, disabled idle cancellation, main-window policy controls scoped
+  away from companion actions, complete process-group shutdown, and no new QEMU
+  process; 27 focused harness tests cover duplicate frames, incorrectly enabled
+  cancellation, and cross-window action contamination. Debian, the authenticated
+  maintainer companion, delivered key-event/editable-text traversal, and pixel
   rendering remain open; GNOME Wayland accepted an exploratory AT-SPI Escape
   synthesis request without delivering it to the WebKit dialog. WebKit exposes
   the resolver text field as an entry without an AT-SPI EditableText interface.
