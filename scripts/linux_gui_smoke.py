@@ -153,6 +153,11 @@ def validate_launch(executable: Path, timeout: float, env: dict[str, str]) -> Pa
         raise ValueError(f"Packaged executable is not executable: {executable}")
     return executable.resolve(strict=True)
 
+def launch_environment(env: dict[str, str]) -> dict[str, str]:
+    planned = env.copy()
+    planned["WEBKIT_DISABLE_DMABUF_RENDERER"] = "1"
+    return planned
+
 def open_pinned_executable(executable: Path) -> int:
     flags = os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC
     try:
@@ -702,6 +707,7 @@ def main(argv=None):
             [f"/proc/self/fd/{descriptor}"],
             pass_fds=(descriptor,),
             start_new_session=True,
+            env=launch_environment(os.environ),
         )
     finally:
         os.close(descriptor)

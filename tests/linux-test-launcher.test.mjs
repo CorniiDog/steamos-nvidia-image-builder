@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { linuxTestPlan } from "../scripts/linux-test.mjs";
+import { linuxTestEnvironment, linuxTestPlan } from "../scripts/linux-test.mjs";
 
 const valid = { platform: "linux", arch: "x64", args: ["build"],
   env: { OPEMOS_EXPERIMENTAL_LINUX: "1", OPEMOS_LINUX_ACCEL: "tcg" } };
@@ -36,6 +36,16 @@ test("Development launch requires a nonempty X11 or Wayland session", () => {
     const args = linuxTestPlan({ ...valid, args: ["dev"], env: { ...valid.env, ...display } });
     assert.equal(args[0], "dev");
     assert.equal(args[1], "--config");
+  }
+});
+
+test("Linux tests force the capture-compatible WebKit renderer without mutating input", () => {
+  for (const existing of [undefined, "", "0", "unexpected"]) {
+    const env = { KEEP: "value", WEBKIT_DISABLE_DMABUF_RENDERER: existing };
+    const planned = linuxTestEnvironment(env);
+    assert.equal(planned.WEBKIT_DISABLE_DMABUF_RENDERER, "1");
+    assert.equal(planned.KEEP, "value");
+    assert.equal(env.WEBKIT_DISABLE_DMABUF_RENDERER, existing);
   }
 });
 

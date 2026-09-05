@@ -1454,6 +1454,19 @@ Bundle ID: 225a5c08ebfb77b3e2ba61aa92c678ba59a13321185f3b6766194e97bf8318fa
     system-adjusted controls and Highlight focus outlines, and keeps the dialog
     boundary visible with CanvasText. On 2026-09-05, all 18 focused compatibility-
     preview tests pass. Real OS high-contrast rendering remains open.
+  - [x] Make the experimental Linux launcher and packaged GUI smoke select the
+    capture-compatible WebKitGTK renderer. On Ubuntu 24.04.4 GNOME Wayland with
+    NVIDIA graphics, the unguarded debug package exposed the complete expected
+    AT-SPI document while its foregrounded web surface remained blank after a
+    three-second repaint delay. With `WEBKIT_DISABLE_DMABUF_RENDERER=1`, the same
+    bounded smoke rendered the full unavailable-host interface in a non-black
+    1280x720 RGB capture (SHA-256
+    `68666c08125e3b3b94d75aedadc123ceabad0a065b4aaaaca0bb667ff716635e`),
+    stopped its process group, left no new QEMU process, and released the in-memory
+    capture lease to zero viewers. Focused launcher and harness tests cover absent,
+    empty, conflicting, and unexpected inherited values without mutating caller
+    environments. Companion-window pixels, delivered translations, high contrast,
+    zoom, and real display scaling remain open.
 - [x] Keep unknown Core phases indeterminate; never infer percentages from
   heartbeats or free-form log text. Unknown structured phases now retain only
   their bounded label and current validation/installation context: even a
