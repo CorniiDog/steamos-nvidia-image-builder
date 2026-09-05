@@ -31,6 +31,29 @@ class FakeNode:
     def do_action(self, index): self.invoked = index == 0; return self.invoked
 
 class GuiSmokeTests(unittest.TestCase):
+    def test_enabled_action_and_maintainer_companion_are_exact(self):
+        enabled = "enabled"
+        open_workspace = FakeNode("Open Workspace…", actionable=True, states={enabled})
+        self.assertIs(
+            smoke.exactly_one_enabled_action(FakeNode(children=[open_workspace]), open_workspace.name, enabled),
+            open_workspace,
+        )
+        open_workspace.states = set()
+        with self.assertRaisesRegex(RuntimeError, "not enabled"):
+            smoke.exactly_one_enabled_action(FakeNode(children=[open_workspace]), open_workspace.name, enabled)
+        frame = FakeNode("SteamOS NVIDIA Builder — Maintainer Workspace", children=[
+            FakeNode("Maintainer Workspace", role="heading"),
+            FakeNode("Maintainer verified", role="status"),
+            FakeNode("Refresh", actionable=True, role="push button"),
+            FakeNode("Inspect Core compatibility…", actionable=True, role="push button"),
+        ], role="frame")
+        app = FakeNode(children=[frame])
+        reader = lambda node: node.get_name() or None
+        self.assertIs(smoke.validate_maintainer_companion(app, reader), frame)
+        frame.children[1].name = "Access denied"
+        with self.assertRaisesRegex(RuntimeError, "permission status changed"):
+            smoke.validate_maintainer_companion(app, reader)
+
     def test_idle_build_progress_companion_is_exact_and_noninteractive(self):
         enabled = "enabled"
         heading = FakeNode("Image build progress", role="heading")

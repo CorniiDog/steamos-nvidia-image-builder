@@ -232,6 +232,13 @@ def exactly_one_focused_action(root, label: str, focused_state):
         raise RuntimeError(f"Expected one focused action {label!r}, found {len(matches)}.")
     return matches[0]
 
+def exactly_one_enabled_action(root, label: str, enabled_state):
+    node = exactly_one_action(root, label)
+    if not node.get_state_set().contains(enabled_state):
+        raise RuntimeError(f"Accessible control {label!r} is not enabled.")
+    return node
+
+
 def exactly_one_role(root, label: str, role: str):
     matches = [node for node in named(root, label) if node.get_role_name() == role]
     if len(matches) != 1:
@@ -279,8 +286,8 @@ def validate_settings_focus(settings, focusable_state, focused_state):
         raise RuntimeError(f"Settings initial focus changed: {focused!r}.")
 
 
-def validate_settings_disabled_controls(settings, enabled_state, focusable_state):
-    for label, role in EXPECTED_DISABLED_SETTINGS_CONTROLS:
+def validate_settings_disabled_controls(settings, enabled_state, focusable_state, controls=None):
+    for label, role in controls or EXPECTED_DISABLED_SETTINGS_CONTROLS:
         control = exactly_one_role(settings, label, role)
         states = control.get_state_set()
         if states.contains(enabled_state) or states.contains(focusable_state):
@@ -363,6 +370,20 @@ def validate_linux_unavailable_controls(app, focusable_state, focused_state):
     if focused:
         raise RuntimeError(f"Experimental Linux unavailable initial focus changed: {focused!r}.")
     require_absent(app, UNAVAILABLE_FORBIDDEN_ACTIONS)
+
+
+def validate_maintainer_companion(app, text_reader):
+    frame = exactly_one_role(
+        app, "SteamOS NVIDIA Builder — Maintainer Workspace", "frame"
+    )
+    exactly_one_role(frame, "Maintainer Workspace", "heading")
+    status_text = [text_reader(node) for node in descendants(frame)
+                   if text_reader(node)]
+    if "Maintainer verified" not in status_text:
+        raise RuntimeError(f"Maintainer permission status changed: {status_text!r}.")
+    exactly_one_action(frame, "Refresh")
+    exactly_one_action(frame, "Inspect Core compatibility…")
+    return frame
 
 
 def validate_idle_build_progress_companion(app, enabled_state, text_reader):
@@ -449,7 +470,8 @@ def exercise_accessibility(desktop, deadline: float, expected_pid: int,
                            focusable_state, focused_state, enabled_state,
                            process_poll=None,
                            expect_host_unavailable=False,
-                           expect_build_progress_companion=False):
+                           expect_build_progress_companion=False,
+                           expect_maintainer_companion=False):
     wait = lambda find, description: wait_for(
         find, deadline, description, process_poll=process_poll
     )
@@ -473,7 +495,13 @@ def exercise_accessibility(desktop, deadline: float, expected_pid: int,
     settings = wait(lambda: exactly_one_role(app, "Builder settings", "landmark"),
                     "the Settings landmark")
     validate_settings_focus(settings, focusable_state, focused_state)
-    validate_settings_disabled_controls(settings, enabled_state, focusable_state)
+    disabled_settings = EXPECTED_DISABLED_SETTINGS_CONTROLS
+    if expect_maintainer_companion:
+        disabled_settings = [control for control in disabled_settings
+                             if control[0] != "Open Workspace…"]
+    validate_settings_disabled_controls(
+        settings, enabled_state, focusable_state, disabled_settings
+    )
     close_settings = exactly_one_focused_action(settings, "Close settings", focused_state)
     inspector = wait(lambda: exactly_one_action(app, "Inspect Core compatibility…"),
                      "the Settings compatibility action")
@@ -544,9 +572,18 @@ def exercise_accessibility(desktop, deadline: float, expected_pid: int,
     wait(lambda: exactly_one_focused_action(
         app, "Inspect Core compatibility…", focused_state
     ), "focus restoration after empty dialog close")
-    invoke(close_settings)
-    wait(lambda: exactly_one_focused_action(app, "Open settings", focused_state),
-         "focus restoration after Settings close")
+    if expect_maintainer_companion:
+        open_maintainer = wait(
+            lambda: exactly_one_enabled_action(settings, "Open Workspace…", enabled_state),
+            "the authorized maintainer workspace action",
+        )
+        invoke(open_maintainer)
+        wait(lambda: validate_maintainer_companion(app, accessible_text),
+             "the authorized maintainer companion")
+    else:
+        invoke(close_settings)
+        wait(lambda: exactly_one_focused_action(app, "Open settings", focused_state),
+             "focus restoration after Settings close")
 
 def process_start_time(entry: Path, expected_pid: int) -> int:
     try:
@@ -648,6 +685,7 @@ def main(argv=None):
     parser.add_argument("--timeout", type=float, default=20)
     parser.add_argument("--expect-host-unavailable", action="store_true")
     parser.add_argument("--expect-build-progress-companion", action="store_true")
+    parser.add_argument("--expect-maintainer-companion", action="store_true")
     args = parser.parse_args(argv)
     executable = validate_launch(args.executable, args.timeout, os.environ)
     try:
@@ -675,7 +713,8 @@ def main(argv=None):
                                enabled_state=Atspi.StateType.ENABLED,
                                process_poll=process.poll,
                                expect_host_unavailable=args.expect_host_unavailable,
-                               expect_build_progress_companion=args.expect_build_progress_companion)
+                               expect_build_progress_companion=args.expect_build_progress_companion,
+                               expect_maintainer_companion=args.expect_maintainer_companion)
     finally:
         stop_process_group(process)
     new_qemu = qemu_processes() - qemu_before
