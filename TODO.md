@@ -252,9 +252,15 @@ installation targets, production activation, or hardware certification.
   headings/status, disabled idle cancellation, main-window policy controls scoped
   away from companion actions, complete process-group shutdown, and no new QEMU
   process; 27 focused harness tests cover duplicate frames, incorrectly enabled
-  cancellation, and cross-window action contamination. Debian, the authenticated
-  maintainer companion, delivered key-event/editable-text traversal, and pixel
-  rendering remain open; GNOME Wayland accepted an exploratory AT-SPI Escape
+  cancellation, and cross-window action contamination. The authenticated
+  maintainer gate was then exercised against the existing `CorniiDog/OPEMOS`
+  permission and approved-source inventory: the live smoke waits for enabled
+  `Open Workspace…`, opens the exact native maintainer frame, verifies
+  `Maintainer verified`, Refresh, and its read-only Core inspector, performs no
+  plan/worktree/commit/push/build/release action, stops the complete process
+  group, and leaves no new QEMU process. Twenty-eight focused harness tests also
+  reject disabled maintainer entry and denied or ambiguous companion state.
+  Debian, delivered key-event/editable-text traversal, and pixel rendering remain open; GNOME Wayland accepted an exploratory AT-SPI Escape
   synthesis request without delivering it to the WebKit dialog. WebKit exposes
   the resolver text field as an entry without an AT-SPI EditableText interface.
   The former HTML file control also accepted `press` without opening a chooser;
