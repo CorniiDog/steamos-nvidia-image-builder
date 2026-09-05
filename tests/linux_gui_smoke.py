@@ -31,6 +31,39 @@ class FakeNode:
     def do_action(self, index): self.invoked = index == 0; return self.invoked
 
 class GuiSmokeTests(unittest.TestCase):
+    def test_idle_build_progress_companion_is_exact_and_noninteractive(self):
+        enabled = "enabled"
+        heading = FakeNode("Image build progress", role="heading")
+        status = FakeNode("Preparing", role="heading")
+        message = FakeNode("Connecting to the current build request.", role="paragraph")
+        cancel = FakeNode("Cancel Build", role="push button")
+        frame = FakeNode("SteamOS NVIDIA Builder — Progress", children=[heading, status, message, cancel], role="frame")
+        app = FakeNode(children=[frame])
+        reader = lambda node: node.get_name() or None
+        smoke.validate_idle_build_progress_companion(app, enabled, reader)
+        cancel.states = {enabled}
+        with self.assertRaisesRegex(RuntimeError, "enabled cancellation"):
+            smoke.validate_idle_build_progress_companion(app, enabled, reader)
+        cancel.states = set()
+        app.children.append(FakeNode(frame.name, role=frame.role))
+        with self.assertRaisesRegex(RuntimeError, "Expected one frame"):
+            smoke.validate_idle_build_progress_companion(app, enabled, reader)
+
+    def test_main_unavailable_controls_ignore_companion_actions(self):
+        focusable, focused = "focusable", "focused"
+        controls = [FakeNode(name, actionable=True, role=role, states={focusable})
+                    for name, role in smoke.EXPECTED_LINUX_UNAVAILABLE_CONTROLS]
+        main = FakeNode("OPEMOS EXE — Experimental Linux Test", children=controls, role="frame")
+        companion = FakeNode("SteamOS NVIDIA Builder — Progress", children=[
+            FakeNode("Advanced diagnostics", actionable=True, role="push button", states={focusable})
+        ], role="frame")
+        app = FakeNode(children=[main, companion])
+        smoke.validate_linux_unavailable_controls(
+            smoke.exactly_one_role(app, main.name, "frame"), focusable, focused
+        )
+        with self.assertRaisesRegex(RuntimeError, "controls changed"):
+            smoke.validate_linux_unavailable_controls(app, focusable, focused)
+
     def test_launch_validation_rejects_missing_opt_in_display_and_symlink(self):
         with tempfile.TemporaryDirectory() as directory:
             executable = Path(directory) / "app"

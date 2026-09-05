@@ -1,5 +1,18 @@
 use super::*;
 
+#[cfg(all(debug_assertions, target_os = "linux"))]
+fn linux_gui_smoke_companion() -> Option<&'static str> {
+    match (
+        std::env::var("OPEMOS_EXPERIMENTAL_LINUX").ok().as_deref(),
+        std::env::var("OPEMOS_LINUX_GUI_SMOKE_COMPANION")
+            .ok()
+            .as_deref(),
+    ) {
+        (Some("1"), Some("build-progress")) => Some("build-progress"),
+        _ => None,
+    }
+}
+
 fn cleanup_managed_workers(app: &tauri::AppHandle) {
     if let Ok(mut manager) = app.state::<Mutex<UsbPreparationManager>>().lock() {
         manager.cancel_all();
@@ -26,6 +39,10 @@ pub fn run() {
                 && payload.event() == tauri::webview::PageLoadEvent::Finished
             {
                 let _ = webview.window().show();
+                #[cfg(all(debug_assertions, target_os = "linux"))]
+                if linux_gui_smoke_companion() == Some("build-progress") {
+                    let _ = windows::open_progress_window(webview.app_handle().clone());
+                }
             }
         })
         .manage(Mutex::new(ApplianceManager::default()))

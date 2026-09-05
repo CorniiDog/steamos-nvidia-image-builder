@@ -365,6 +365,19 @@ def validate_linux_unavailable_controls(app, focusable_state, focused_state):
     require_absent(app, UNAVAILABLE_FORBIDDEN_ACTIONS)
 
 
+def validate_idle_build_progress_companion(app, enabled_state, text_reader):
+    frame = exactly_one_role(app, "SteamOS NVIDIA Builder — Progress", "frame")
+    exactly_one_role(frame, "Image build progress", "heading")
+    exactly_one_role(frame, "Preparing", "heading")
+    messages = [text_reader(node) for node in descendants(frame)
+                if node.get_role_name() == "paragraph" and text_reader(node)]
+    if "Connecting to the current build request." not in messages:
+        raise RuntimeError(f"Idle build-progress status text changed: {messages!r}.")
+    cancel = exactly_one_role(app, "Cancel Build", "push button")
+    if cancel.get_state_set().contains(enabled_state):
+        raise RuntimeError("Idle build-progress companion enabled cancellation without a build.")
+
+
 def validate_open_image_chooser(chooser, enabled_state):
     open_button = exactly_one_action(chooser, "Open", {"push button", "button"})
     cancel_button = exactly_one_action(chooser, "Cancel", {"push button", "button"})
@@ -435,16 +448,21 @@ def wait_for(find, deadline: float, description: str, process_poll=None):
 def exercise_accessibility(desktop, deadline: float, expected_pid: int,
                            focusable_state, focused_state, enabled_state,
                            process_poll=None,
-                           expect_host_unavailable=False):
+                           expect_host_unavailable=False,
+                           expect_build_progress_companion=False):
     wait = lambda find, description: wait_for(
         find, deadline, description, process_poll=process_poll
     )
     app = wait(lambda: application_for_pid(desktop, expected_pid),
                "the packaged OPEMOS accessibility tree")
+    if expect_build_progress_companion:
+        wait(lambda: validate_idle_build_progress_companion(app, enabled_state, accessible_text),
+             "the idle build-progress companion")
     if expect_host_unavailable:
         wait(lambda: validate_linux_unavailable_gate(app),
              "the scheduler-limited Linux unavailable gate")
-        validate_linux_unavailable_controls(app, focusable_state, focused_state)
+        main_frame = exactly_one_role(app, "OPEMOS EXE — Experimental Linux Test", "frame")
+        validate_linux_unavailable_controls(main_frame, focusable_state, focused_state)
     invoke(exactly_one_action(app, "Choose Image…"))
     chooser = wait(lambda: exactly_one_role(app, "Open File", "file chooser"),
                    "the native recovery-image chooser")
@@ -629,6 +647,7 @@ def main(argv=None):
     parser.add_argument("--executable", required=True, type=Path)
     parser.add_argument("--timeout", type=float, default=20)
     parser.add_argument("--expect-host-unavailable", action="store_true")
+    parser.add_argument("--expect-build-progress-companion", action="store_true")
     args = parser.parse_args(argv)
     executable = validate_launch(args.executable, args.timeout, os.environ)
     try:
@@ -655,7 +674,8 @@ def main(argv=None):
                                focused_state=Atspi.StateType.FOCUSED,
                                enabled_state=Atspi.StateType.ENABLED,
                                process_poll=process.poll,
-                               expect_host_unavailable=args.expect_host_unavailable)
+                               expect_host_unavailable=args.expect_host_unavailable,
+                               expect_build_progress_companion=args.expect_build_progress_companion)
     finally:
         stop_process_group(process)
     new_qemu = qemu_processes() - qemu_before
