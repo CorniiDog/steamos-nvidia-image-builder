@@ -1546,7 +1546,11 @@ must be reported; a default-suite pass does not imply hardware certification.
   fixture head `3e49323fce266af8686039fb6487918ef5a64fd9`; nine existing conformance
   tests could not resolve immutable ancestors. Canonical GitHub history proves
   the oldest required pin is ten commits behind that head, so the job now fetches
-  exactly 11 commits and its documentation guard pins that bound. Debian and
+  initially fetched 11 commits. The next PR run passed those nine cases and
+  exposed two older compatibility-generator consumers pinned to
+  `a1c03c9658c5ed885f094b5f8e0896d818fee785`, 45 commits behind the checkout.
+  Canonical GitHub provides both expected files at that exact object, so the
+  final checkout and documentation guard fetch exactly 46 commits. Debian and
   managed Fedora appliance boot remain separate.
 - [ ] Add bounded release-package smoke tests which start and close the packaged
   application and confirm no orphan QEMU processes remain. The experimental
