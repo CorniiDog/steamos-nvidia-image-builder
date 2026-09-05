@@ -114,7 +114,11 @@ Missing appliance state must remain unavailable rather than trigger an
 unreviewed image download.
 
 The Linux entry point requires both explicit environment choices above, an
-x86_64 Linux host, and a graphical session for development launch. Runtime
+x86_64 Linux host, and a graphical session for development launch. The experimental
+launcher and packaged GUI smoke force `WEBKIT_DISABLE_DMABUF_RENDERER=1`: on the
+validated GNOME Wayland/NVIDIA host, WebKitGTK exposed a complete AT-SPI tree but
+presented a blank captured surface without this renderer guard.
+Runtime
 Ubuntu/Debian discovery and all appliance/Core checks still apply. Unsupported
 extra CLI arguments are rejected. The separate test configuration uses an opaque
 main window and its own application identifier; macOS defaults remain unchanged.

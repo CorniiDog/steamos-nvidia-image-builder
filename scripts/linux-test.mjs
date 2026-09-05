@@ -27,6 +27,10 @@ export function linuxTestPlan({ platform, arch, env, args }) {
     "--config", path.join(root, "src-tauri/tauri.linux-test.conf.json")];
 }
 
+export function linuxTestEnvironment(env) {
+  return { ...env, WEBKIT_DISABLE_DMABUF_RENDERER: "1" };
+}
+
 // Tauri may normalize Cargo.toml and generate a platform capability schema.
 // Snapshot only these known source paths and restore their exact pre-launch state.
 async function snapshotRestoredFile(file) {
@@ -147,7 +151,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       path.join(root, "src-tauri/Cargo.toml"),
       path.join(root, "src-tauri/gen/schemas/linux-schema.json"),
     ], () => runLinuxTestCommand(process.execPath,
-      [path.join(root, "node_modules/@tauri-apps/cli/tauri.js"), ...args]));
+      [path.join(root, "node_modules/@tauri-apps/cli/tauri.js"), ...args],
+      { env: linuxTestEnvironment(process.env) }));
     if (result.signal) {
       console.error(`Linux testing command terminated by ${result.signal}.`);
       process.exitCode = 1;

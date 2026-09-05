@@ -31,6 +31,17 @@ class FakeNode:
     def do_action(self, index): self.invoked = index == 0; return self.invoked
 
 class GuiSmokeTests(unittest.TestCase):
+    def test_launch_environment_forces_capture_compatible_renderer_without_mutating_input(self):
+        for existing in (None, "", "0", "unexpected"):
+            env = {"KEEP": "value"}
+            if existing is not None:
+                env["WEBKIT_DISABLE_DMABUF_RENDERER"] = existing
+            original = env.copy()
+            planned = smoke.launch_environment(env)
+            self.assertEqual(planned["WEBKIT_DISABLE_DMABUF_RENDERER"], "1")
+            self.assertEqual(planned["KEEP"], "value")
+            self.assertEqual(env, original)
+
     def test_enabled_action_and_maintainer_companion_are_exact(self):
         enabled = "enabled"
         open_workspace = FakeNode("Open Workspace…", actionable=True, states={enabled})
